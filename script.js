@@ -1,58 +1,129 @@
-// Projects rendering logic -----------------------------------------------------------------------------------------------------
-const projects = [
-  {
-    name: "Picklers",
-    description: "A pickleball social site built with JavaScript and C++ backend.",
-    link: "link_to_project1",
-    image: "path_to_image.jpg"
-  },
-  {
-    name: "SunFresh Wine Inventory",
-    description: "Database solution for a wine distributor built with PHP and MySQL.",
-    link: "link_to_project2",
-    image: "path_to_image2.jpg"
-  }
-];
+// ─── PHOTO SLIDESHOW ───-------------------------------------------------------------------------------------------------------------------------
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsContainer = document.getElementById('slideDots');
+  let current = 0;
+  let timer = null;
+  const INTERVAL = 3500;
 
-window.onload = () => {
-  const list = document.getElementById("project-list");
-  projects.forEach((proj) => {
-    const div = document.createElement("div");
-    div.className = "col-md-4 mb-4";
-    div.innerHTML = `
-      <div class="project-card shadow-sm rounded">
-        <img src="${proj.image}" class="card-img-top" alt="${proj.name}">
-        <div class="card-body">
-          <h5 class="card-title">${proj.name}</h5>
-          <p class="card-text">${proj.description}</p>
-          <a href="${proj.link}" class="btn btn-teal" target="_blank">View Project</a>
-        </div>
-      </div>
-    `;
-    list.appendChild(div);
+  if (!slides.length || !dotsContainer) return;
+
+  // Build dots 
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'slide-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+    dot.addEventListener('click', () => goTo(i));
+    dotsContainer.appendChild(dot);
   });
-};
-// Hamburger menu toggle functionality
-document.getElementById("hamburger").addEventListener("click", () => {
-  document.getElementById("menu").classList.toggle("hidden");
-});
 
-// Show selected section
-function showSection(id) {
-  const sections = document.querySelectorAll(".section");
-  sections.forEach((sec) => sec.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
-  document.getElementById("menu").classList.add("hidden");
+  function goTo(index) {
+    slides[current].classList.remove('active');
+    dotsContainer.children[current].classList.remove('active');
+    current = (index + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    dotsContainer.children[current].classList.add('active');
+  }
+
+  function next() { goTo(current + 1); }
+
+  function startTimer() { timer = setInterval(next, INTERVAL); }
+  function stopTimer() { clearInterval(timer); }
+
+  // Pause on hover
+  const container = document.querySelector('.hero-slideshow');
+  if (container) {
+    container.addEventListener('mouseenter', stopTimer);
+    container.addEventListener('mouseleave', startTimer);
+  }
+
+  startTimer();
+
+  // Expose for inline button handlers
+  window.slideStep = function (dir) {
+    stopTimer();
+    goTo(current + dir);
+    startTimer();
+  };
+})();
+
+
+function openMobile() {
+  document.getElementById('mobileMenu').classList.add('open');
+  document.getElementById('hamburgerBtn').setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
 }
 
-document.querySelectorAll('a.nav-link').forEach(link => {
-  link.addEventListener('click', function(e) {
-    if (this.hash !== "") {
-      e.preventDefault();
-      const target = document.querySelector(this.hash);
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth" });
-      }
+function closeMobile() {
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('hamburgerBtn').setAttribute('aria-expanded', 'false');
+  document.body.style.overflow = '';
+}
+
+// ─── SCROLL FADE-IN ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
     }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// CONTACT FORM ----------------------------------------------------------------------------------------------------------------
+
+async function handleFormSubmit(event) {
+  event.preventDefault();
+
+  const n = document.getElementById("name").value.trim();
+  const e = document.getElementById("email").value.trim();
+  const m = document.getElementById("message").value.trim();
+
+  if (!n || !e || !m) {
+    alert("Please fill out all fields.");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://formspree.io/f/mbdbgeea", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        name: n,
+        email: e,
+        message: m
+      })
+    });
+
+    if (response.ok) {
+      document.getElementById("submitBtn").textContent = "sent ✓";
+
+      document.getElementById("name").value = "";
+      document.getElementById("email").value = "";
+      document.getElementById("message").value = "";
+    } else {
+      alert("Something went wrong.");
+    }
+
+  } catch (err) {
+    alert("Connection error.");
+  }
+}
+// ─── NAV ACTIVE STATE ON SCROLL -----------------------------------------------------------------------------------------------------------───
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.style.color = a.getAttribute('href') === `#${current}` ? 'var(--accent)' : '';
   });
 });
